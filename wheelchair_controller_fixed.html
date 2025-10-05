@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wheelchair Controller</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .disconnected {
+            background: #ffe0e0;
+            color: #d32f2f;
+        }
+        
+        .connected {
+            background: #e0ffe0;
+            color: #2e7d32;
+        }
+        
+        .listening {
+            background: #fff4e0;
+            color: #f57c00;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        button {
+            width: 100%;
+            padding: 18px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-connect {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-permission {
+            background: #ff9800;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        .btn-permission:hover {
+            background: #f57c00;
+        }
+        
+        .btn-voice {
+            background: #f44336;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .btn-voice:hover:not(:disabled) {
+            background: #d32f2f;
+        }
+        
+        .btn-voice:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-voice.active {
+            background: #4caf50;
+            animation: pulse 0.8s infinite;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .btn-control {
+            padding: 20px;
+            background: #2196f3;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .btn-control:hover:not(:disabled) {
+            background: #1976d2;
+        }
+        
+        .btn-control:disabled {
+            background: #e0e0e0;
+            color: #9e9e9e;
+            cursor: not-allowed;
+        }
+        
+        .btn-stop {
+            background: #f44336;
+            grid-column: span 3;
+        }
+        
+        .info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        
+        .info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        #transcript {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            min-height: 50px;
+            color: #1565c0;
+            font-weight: bold;
+        }
+
+        #response {
+            background: #fff3e0;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            color: #e65100;
+            text-align: center;
+            display: none;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            color: #856404;
+        }
+
+        .warning strong {
+            color: #d32f2f;
+        }
+
+        .error-box {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            color: #c62828;
+        }
+
+        .error-box h3 {
+            margin-top: 0;
+            color: #d32f2f;
+        }
+
+        .error-box ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .error-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦽 Wheelchair Controller</h1>
+        
+        <div id="httpsError" class="error-box hidden">
+            <h3>🔒 HTTPS Required for Microphone Access</h3>
+            <p><strong>Your page is not secure (file:// or content://).</strong></p>
+            <p>To use voice commands, you need to host this file on HTTPS. Here are your options:</p>
+            <ol>
+                <li><strong>Use this page directly:</strong> You're viewing it in Claude, which is HTTPS! Just use it here.</li>
+                <li><strong>GitHub Pages (Free):</strong>
+                    <ul>
+                        <li>Go to <code>github.com</code></li>
+                        <li>Create new repository</li>
+                        <li>Upload this HTML file</li>
+                        <li>Enable Pages in Settings</li>
+                    </ul>
+                </li>
+                <li><strong>Use ngrok:</strong> Run a local server and expose via ngrok</li>
+            </ol>
+            <p><strong>Note:</strong> Manual buttons will still work for ESP32 control!</p>
+        </div>
+        
+        <div id="status" class="status disconnected">
+            ⚠️ Not Connected
+        </div>
+
+        <div id="permissionWarning" class="warning hidden">
+            <strong>⚠️ Microphone Access Required!</strong>
+            <p>Click the button below to enable voice control. Your browser will ask for microphone permission.</p>
+        </div>
+
+        <button id="permissionBtn" class="btn-permission hidden">
+            🎤 ENABLE MICROPHONE ACCESS
+        </button>
+        
+        <button id="connectBtn" class="btn-connect">
+            🔗 CONNECT TO ESP32
+        </button>
+        
+        <button id="voiceBtn" class="btn-voice" disabled>
+            🎤 HOLD TO SPEAK
+        </button>
+        
+        <div id="transcript">
+            💬 Waiting for command...
+        </div>
+
+        <div id="response"></div>
+        
+        <div class="controls">
+            <div></div>
+            <button class="btn-control" onclick="send('forward')" disabled>⬆️<br>FORWARD</button>
+            <div></div>
+            <button class="btn-control" onclick="send('left')" disabled>⬅️<br>LEFT</button>
+            <button class="btn-control btn-stop" onclick="send('stop')" disabled>🛑 STOP</button>
+            <button class="btn-control" onclick="send('right')" disabled>➡️<br>RIGHT</button>
+            <div></div>
+            <button class="btn-control" onclick="send('backward')" disabled>⬇️<br>BACK</button>
+            <div></div>
+        </div>
+        
+        <div class="info">
+            <h3>📢 Voice Commands:</h3>
+            <ul>
+                <li><strong>Forward</strong> - go, ahead</li>
+                <li><strong>Backward</strong> - back, reverse</li>
+                <li><strong>Left</strong> - turn left</li>
+                <li><strong>Right</strong> - turn right</li>
+                <li><strong>Stop</strong> - halt, wait</li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <h3>ℹ️ Instructions:</h3>
+            <ul>
+                <li>1. Make sure page is HTTPS (see error above if not)</li>
+                <li>2. Click "ENABLE MICROPHONE ACCESS"</li>
+                <li>3. Click "CONNECT TO ESP32"</li>
+                <li>4. Select "ESP32_Wheelchair"</li>
+                <li>5. Hold mic button and speak</li>
+                <li>6. Or use manual buttons (work without mic)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const SERVICE = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+        const CHAR = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
+        
+        let device, characteristic, recognition;
+        let micPermissionGranted = false;
+        
+        // Check if page is secure
+        function checkSecureContext() {
+            const isSecure = window.isSecureContext;
+            const protocol = window.location.protocol;
+            
+            if (!isSecure || protocol === 'file:' || protocol === 'content:') {
+                document.getElementById('httpsError').classList.remove('hidden');
+                document.getElementById('transcript').textContent = '⚠️ HTTPS required for microphone. See error above or use manual buttons.';
+                return false;
+            }
+            return true;
+        }
+        
+        // Check browser support
+        if (!navigator.bluetooth) {
+            alert('❌ Web Bluetooth not supported!\n\nPlease use:\n- Chrome on Android\n- Chrome/Edge on Windows/Mac');
+        }
+        
+        // Check if page is secure on load
+        const isPageSecure = checkSecureContext();
+        
+        // Only check microphone if page is secure
+        if (isPageSecure) {
+            checkMicrophonePermission();
+        }
+
+        async function checkMicrophonePermission() {
+            if (!window.isSecureContext) {
+                return;
+            }
+            
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const result = await navigator.permissions.query({ name: 'microphone' });
+                    
+                    if (result.state === 'granted') {
+                        micPermissionGranted = true;
+                        initSpeechRecognition();
+                        document.getElementById('permissionWarning').classList.add('hidden');
+                        document.getElementById('permissionBtn').classList.add('hidden');
+                    } else {
+                        document.getElementById('permissionWarning').classList.remove('hidden');
+                        document.getElementById('permissionBtn').classList.remove('hidden');
+                    }
+                    
+                    result.onchange = () => {
+                        if (result.state === 'granted') {
+                            micPermissionGranted = true;
+                            initSpeechRecognition();
+                            document.getElementById('permissionWarning').classList.add('hidden');
+                            document.getElementById('permissionBtn').classList.add('hidden');
+                            document.getElementById('transcript').textContent = '✅ Microphone access granted!';
+                        }
+                    };
+                } else {
+                    document.getElementById('permissionWarning').classList.remove('hidden');
+                    document.getElementById('permissionBtn').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.log('Permission check not supported:', err);
+                document.getElementById('permissionWarning').classList.remove('hidden');
+                document.getElementById('permissionBtn').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('permissionBtn').onclick = async () => {
+            if (!window.isSecureContext) {
+                alert('❌ This page must be served over HTTPS!\n\nSee the red error box above for solutions.');
+                return;
+            }
+            
+            try {
+                document.getElementById('transcript').textContent = '🎤 Requesting microphone access...';
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                
+                micPermissionGranted = true;
+                initSpeechRecognition();
+                
+                document.getElementById('permissionWarning').classList.add('hidden');
+                document.getElementById('permissionBtn').classList.add('hidden');
+                document.getElementById('transcript').textContent = '✅ Microphone access granted! You can now use voice commands.';
+                
+            } catch (err) {
+                console.error('Microphone permission error:', err);
+                document.getElementById('transcript').textContent = '❌ Microphone permission denied. Check browser settings.';
+            }
+        };
+
+        function initSpeechRecognition() {
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Speech) {
+                alert('❌ Voice recognition not supported in this browser!');
+                return;
+            }
+            
+            recognition = new Speech();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                document.getElementById('transcript').textContent = '🎤 Listening... Speak now!';
+            };
+            
+            recognition.onresult = (e) => {
+                const text = e.results[0][0].transcript.toLowerCase();
+                console.log('Voice heard:', text);
+                document.getElementById('transcript').textContent = `🎤 Heard: "${text}"`;
+                processVoice(text);
+            };
+            
+            recognition.onend = () => {
+                console.log('Speech recognition ended');
+                setStatus('connected');
+                document.getElementById('voiceBtn').classList.remove('active');
+            };
+            
+            recognition.onerror = (e) => {
+                console.error('Speech error:', e.error);
+                let errorMsg = '❌ Error: ';
+                
+                if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+                    errorMsg = '❌ Microphone permission denied!';
+                    document.getElementById('permissionWarning').classList.remove('hidden');
+                    document.getElementById('permissionBtn').classList.remove('hidden');
+                } else if (e.error === 'no-speech') {
+                    errorMsg += 'No speech detected. Try again!';
+                } else if (e.error === 'network') {
+                    errorMsg += 'Network error. Check connection!';
+                } else {
+                    errorMsg += e.error;
+                }
+                
+                document.getElementById('transcript').textContent = errorMsg;
+                setStatus('connected');
+                document.getElementById('voiceBtn').classList.remove('active');
+            };
+            
+            console.log('Speech recognition initialized');
+        }
+        
+        document.getElementById('connectBtn').onclick = async () => {
+            try {
+                setStatus('connecting', '🔍 Searching...');
+                
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32_Wheelchair' }],
+                    optionalServices: [SERVICE]
+                });
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE);
+                characteristic = await service.getCharacteristic(CHAR);
+                
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', onNotify);
+                
+                setStatus('connected', '✅ Connected!');
+                enableButtons(true);
+                
+                device.addEventListener('gattserverdisconnected', () => {
+                    setStatus('disconnected', '❌ Disconnected');
+                    enableButtons(false);
+                });
+                
+            } catch (err) {
+                console.error(err);
+                setStatus('disconnected', '❌ Failed');
+                alert('Connection failed!\n\nMake sure:\n1. ESP32 is powered ON\n2. Bluetooth is enabled\n3. You selected ESP32_Wheelchair');
+            }
+        };
+        
+        let voiceBtn = document.getElementById('voiceBtn');
+        
+        voiceBtn.addEventListener('mousedown', startVoice);
+        voiceBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startVoice();
+        });
+        
+        voiceBtn.addEventListener('mouseup', stopVoice);
+        voiceBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopVoice();
+        });
+        
+        function startVoice() {
+            if (!window.isSecureContext) {
+                alert('❌ HTTPS required!\n\nSee the red error box for solutions.\n\nYou can still use manual buttons!');
+                return;
+            }
+            
+            if (!micPermissionGranted || !recognition) {
+                document.getElementById('transcript').textContent = '⚠️ Please click "ENABLE MICROPHONE ACCESS" first!';
+                document.getElementById('permissionWarning').classList.remove('hidden');
+                document.getElementById('permissionBtn').classList.remove('hidden');
+                return;
+            }
+            
+            if (!characteristic) {
+                alert('Please connect to ESP32 first!');
+                return;
+            }
+            
+            try {
+                recognition.start();
+                setStatus('listening', '🎤 Listening...');
+                voiceBtn.classList.add('active');
+                console.log('Starting voice recognition...');
+            } catch (err) {
+                console.error('Start error:', err);
+                if (!err.message.includes('already started')) {
+                    document.getElementById('transcript').textContent = '❌ Error: ' + err.message;
+                }
+            }
+        }
+        
+        function stopVoice() {
+            if (recognition) {
+                try {
+                    recognition.stop();
+                    console.log('Stopping voice recognition...');
+                } catch (err) {
+                    console.error('Stop error:', err);
+                }
+            }
+        }
+        
+        function processVoice(text) {
+            const map = {
+                'forward': ['forward', 'go', 'ahead', 'move'],
+                'backward': ['backward', 'back', 'reverse'],
+                'left': ['left', 'turn left'],
+                'right': ['right', 'turn right'],
+                'stop': ['stop', 'halt', 'wait', 'freeze', 'brake']
+            };
+            
+            for (let [cmd, words] of Object.entries(map)) {
+                if (words.some(w => text.includes(w))) {
+                    send(cmd);
+                    return;
+                }
+            }
+            
+            document.getElementById('transcript').textContent = `❓ Unknown: "${text}"`;
+        }
+        
+        async function send(cmd) {
+            if (!characteristic) {
+                alert('Not connected!');
+                return;
+            }
+            
+            try {
+                await characteristic.writeValue(new TextEncoder().encode(cmd));
+                document.getElementById('transcript').textContent = `✅ Sent: ${cmd}`;
+                console.log('Sent:', cmd);
+            } catch (err) {
+                alert('Send failed: ' + err.message);
+            }
+        }
+        
+        function onNotify(event) {
+            const msg = new TextDecoder().decode(event.target.value);
+            const resp = document.getElementById('response');
+            resp.textContent = `📢 ESP32: ${msg}`;
+            resp.style.display = 'block';
+            setTimeout(() => resp.style.display = 'none', 3000);
+        }
+        
+        function setStatus(state, text) {
+            const status = document.getElementById('status');
+            status.className = `status ${state}`;
+            if (text) status.textContent = text;
+        }
+        
+        function enableButtons(enabled) {
+            document.getElementById('voiceBtn').disabled = !enabled;
+            document.querySelectorAll('.btn-control').forEach(b => b.disabled = !enabled);
+        }
+        
+        window.send = send;
+    </script>
+</body>
+</html>
