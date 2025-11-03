@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitoring System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .config-section {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .config-section h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+            font-size: 1.5em;
+        }
+        
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group input {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1em;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        .system-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .status-card h3 {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-card .value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+        }
+        
+        .card.turbidity::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+        .card.tds::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+        .card.temperature::before { background: linear-gradient(90deg, #fa709a, #fee140); }
+        .card.humidity::before { background: linear-gradient(90deg, #a8edea, #fed6e3); }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin-right: 15px;
+        }
+        
+        .turbidity .card-icon { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .tds .card-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .temperature .card-icon { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .humidity .card-icon { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+        
+        .card-title {
+            font-size: 0.9em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        
+        .card-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #667eea;
+        }
+        
+        .card-unit {
+            font-size: 1.1em;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .card-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 0.95em;
+        }
+        
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .quality-indicator {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1em;
+        }
+        
+        .quality-excellent { background: #d4edda; color: #155724; }
+        .quality-good { background: #d1ecf1; color: #0c5460; }
+        .quality-moderate { background: #fff3cd; color: #856404; }
+        .quality-poor { background: #f8d7da; color: #721c24; }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .chart-header h2 {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .help-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .help-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .help-section p {
+            margin: 8px 0;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .help-section a {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        .help-section code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-value {
+                font-size: 2.2em;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💧 Water Quality Monitoring System</h1>
+            <p>Real-time monitoring - Multiple CORS bypass methods</p>
+        </div>
+        
+        <div class="config-section">
+            <h2>⚙️ ThingSpeak Configuration</h2>
+            <div class="input-group">
+                <input type="text" id="channelId" placeholder="Enter Channel ID" value="3145330">
+                <button class="btn" id="startBtn">🚀 Start Monitoring</button>
+            </div>
+            <div id="statusMessage"></div>
+            
+            <div class="help-section">
+                <h3>🔧 Troubleshooting Connection Issues</h3>
+                <p><strong>If you see "Failed to fetch" errors:</strong></p>
+                <p>1️⃣ <strong>Check if your channel has data:</strong> Visit <a href="https://thingspeak.com/channels/3145330" target="_blank">https://thingspeak.com/channels/3145330</a></p>
+                <p>2️⃣ <strong>Verify the channel is PUBLIC:</strong> Go to Channel Settings → Make Status: Public</p>
+                <p>3️⃣ <strong>Test the API directly:</strong> <a href="https://api.thingspeak.com/channels/3145330/feeds.json?results=2" target="_blank">Click here to test API</a></p>
+                <p>4️⃣ <strong>If no data exists:</strong> Make sure your ESP32/Arduino is sending data to ThingSpeak</p>
+                <p>5️⃣ <strong>Alternative:</strong> Try a different channel ID that has recent data</p>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading" style="display:none;">Connecting to ThingSpeak</div>
+        
+        <div id="systemStatus" style="display:none;">
+            <div class="system-status">
+                <div class="status-card">
+                    <h3>📡 Status</h3>
+                    <div class="value" id="connectionStatus">Connected</div>
+                </div>
+                <div class="status-card">
+                    <h3>🕐 Last Update</h3>
+                    <div class="value" id="lastUpdate" style="font-size: 1.2em;">--</div>
+                </div>
+                <div class="status-card">
+                    <h3>📊 Readings</h3>
+                    <div class="value" id="totalReadings">0</div>
+                </div>
+                <div class="status-card">
+                    <h3>⏱️ Next Update</h3>
+                    <div class="value" id="nextUpdate">15s</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid" id="dataGrid" style="display:none;">
+            <div class="card turbidity">
+                <div class="card-header">
+                    <div class="card-icon">💧</div>
+                    <div class="card-title">Turbidity Level</div>
+                </div>
+                <div class="card-value" id="turbidityValue">--</div>
+                <div class="card-unit">NTU</div>
+                <div class="quality-indicator" id="turbidityQuality">Waiting for data...</div>
+            </div>
+            
+            <div class="card tds">
+                <div class="card-header">
+                    <div class="card-icon">🧪</div>
+                    <div class="card-title">TDS Level</div>
+                </div>
+                <div class="card-value" id="tdsValue">--</div>
+                <div class="card-unit">ppm</div>
+                <div class="quality-indicator" id="tdsQuality">Waiting for data...</div>
+            </div>
+            
+            <div class="card temperature">
+                <div class="card-header">
+                    <div class="card-icon">🌡️</div>
+                    <div class="card-title">Temperature</div>
+                </div>
+                <div class="card-value" id="tempValue">--</div>
+                <div class="card-unit">°C</div>
+                <div class="quality-indicator" id="tempQuality">Waiting for data...</div>
+            </div>
+            
+            <div class="card humidity">
+                <div class="card-header">
+                    <div class="card-icon">💨</div>
+                    <div class="card-title">Humidity</div>
+                </div>
+                <div class="card-value" id="humidityValue">--</div>
+                <div class="card-unit">%</div>
+                <div class="quality-indicator" id="humidityQuality">Waiting for data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var appState = {
+            channelId: '',
+            updateInterval: null,
+            countdownInterval: null,
+            nextUpdateTime: 15,
+            jsonpCallbackCounter: 0,
+            retryCount: 0,
+            maxRetries: 3
+        };
+
+        function showStatus(message, type) {
+            var statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = 'status ' + type;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+        }
+
+        function saveConfig() {
+            appState.channelId = document.getElementById('channelId').value.trim();
+            
+            if (!appState.channelId) {
+                showStatus('❌ Please enter Channel ID', 'error');
+                return;
+            }
+            
+            showStatus('🔄 Connecting to ThingSpeak Channel ' + appState.channelId + '...', 'info');
+            
+            if (appState.updateInterval) clearInterval(appState.updateInterval);
+            if (appState.countdownInterval) clearInterval(appState.countdownInterval);
+            
+            appState.retryCount = 0;
+            fetchData();
+        }
+
+        function fetchData() {
+            if (!appState.channelId) return;
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            fetchDirect();
+        }
+
+        function fetchDirect() {
+            var directUrl = 'https://api.thingspeak.com/channels/' + appState.channelId + '/feeds.json?results=20';
+            
+            fetch(directUrl)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Direct fetch failed');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    processData(data);
+                })
+                .catch(function(error) {
+                    console.log('Direct method failed, trying CORS proxy...', error);
+                    fetchWithCorsProxy();
+                });
+        }
+
+        function fetchWithCorsProxy() {
+            var proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?',
+                'https://api.codetabs.com/v1/proxy?quest='
+            ];
+            
+            var currentProxy = proxies[appState.retryCount % proxies.length];
+            var url = currentProxy + encodeURIComponent('https://api.thingspeak.com/channels/' + appState.channelId + '/feeds.json?results=20');
+            
+            fetch(url)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Proxy failed');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    processData(data);
+                })
+                .catch(function(error) {
+                    console.log('Proxy method failed, trying JSONP...', error);
+                    appState.retryCount++;
+                    
+                    if (appState.retryCount < appState.maxRetries) {
+                        fetchWithJSONP();
+                    } else {
+                        handleFetchError();
+                    }
+                });
+        }
+
+        function fetchWithJSONP() {
+            var callbackName = 'thingspeak_callback_' + (++appState.jsonpCallbackCounter);
+            
+            window[callbackName] = function(data) {
+                try {
+                    processData(data);
+                    appState.retryCount = 0;
+                } catch (error) {
+                    console.error('JSONP processing error:', error);
+                    handleFetchError();
+                } finally {
+                    delete window[callbackName];
+                    var script = document.querySelector('script[src*="' + callbackName + '"]');
+                    if (script) script.remove();
+                }
+            };
+            
+            var script = document.createElement('script');
+            script.src = 'https://api.thingspeak.com/channels/' + appState.channelId + '/feeds.json?results=20&callback=' + callbackName;
+            script.onerror = function() {
+                delete window[callbackName];
+                handleFetchError();
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        function handleFetchError() {
+            document.getElementById('loading').style.display = 'none';
+            showStatus('❌ <strong>Connection Failed</strong><br><br>' +
+                '🔍 <strong>Possible Issues:</strong><br>' +
+                '1. Channel <strong>' + appState.channelId + '</strong> has NO DATA yet<br>' +
+                '2. Channel is PRIVATE (must be PUBLIC)<br>' +
+                '3. ESP32/Arduino is not sending data<br><br>' +
+                '✅ <strong>Solutions:</strong><br>' +
+                '• Test API: <a href="https://api.thingspeak.com/channels/' + appState.channelId + '/feeds.json?results=2" target="_blank">Click here</a><br>' +
+                '• Make channel PUBLIC in ThingSpeak settings<br>' +
+                '• Verify your device is uploading data<br>' +
+                '• Try a different channel ID with active data', 
+                'error');
+        }
+
+        function processData(data) {
+            if (!data || !data.feeds || data.feeds.length === 0) {
+                showStatus('⚠️ <strong>Channel Found but NO DATA</strong><br><br>' +
+                    'Channel ID <strong>' + appState.channelId + '</strong> is accessible but contains no sensor readings.<br><br>' +
+                    '📡 Make sure your ESP32/Arduino is:<br>' +
+                    '• Connected to WiFi<br>' +
+                    '• Sending data to ThingSpeak<br>' +
+                    '• Using the correct API keys<br><br>' +
+                    '<a href="https://thingspeak.com/channels/' + appState.channelId + '" target="_blank">View channel on ThingSpeak</a>', 
+                    'warning');
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('systemStatus').style.display = 'block';
+            document.getElementById('dataGrid').style.display = 'grid';
+            document.getElementById('loading').style.display = 'none';
+            
+            updateSystemStatus(data.feeds);
+            updateCurrentValues(data.feeds);
+            
+            showStatus('✅ <strong>Connected Successfully!</strong><br>' +
+                'Monitoring ' + data.feeds.length + ' readings from Channel ' + appState.channelId + '<br>' +
+                'Auto-refresh: Every 15 seconds', 'success');
+            
+            if (!appState.updateInterval) {
+                appState.updateInterval = setInterval(fetchData, 15000);
+                startCountdown();
+            }
+        }
+
+        function startCountdown() {
+            appState.nextUpdateTime = 15;
+            if (appState.countdownInterval) clearInterval(appState.countdownInterval);
+            appState.countdownInterval = setInterval(function() {
+                appState.nextUpdateTime--;
+                var elem = document.getElementById('nextUpdate');
+                if (elem) elem.textContent = appState.nextUpdateTime + 's';
+                if (appState.nextUpdateTime <= 0) {
+                    appState.nextUpdateTime = 15;
+                }
+            }, 1000);
+        }
+
+        function updateSystemStatus(feeds) {
+            var latestFeed = feeds[feeds.length - 1];
+            var timestamp = new Date(latestFeed.created_at);
+            document.getElementById('lastUpdate').textContent = timestamp.toLocaleTimeString();
+            document.getElementById('totalReadings').textContent = feeds.length;
+            document.getElementById('connectionStatus').textContent = '🟢 Live';
+        }
+
+        function getWaterQuality(type, value) {
+            if (type === 'turbidity') {
+                if (value < 1) return { text: '✅ Excellent - Crystal Clear', className: 'quality-excellent' };
+                if (value < 5) return { text: '✔ Good - Clear Water', className: 'quality-good' };
+                if (value < 10) return { text: '⚠️ Moderate - Slightly Cloudy', className: 'quality-moderate' };
+                return { text: '❌ Poor - High Turbidity', className: 'quality-poor' };
+            }
+            
+            if (type === 'tds') {
+                if (value < 300) return { text: '✅ Excellent Quality', className: 'quality-excellent' };
+                if (value < 600) return { text: '✔ Good Quality', className: 'quality-good' };
+                if (value < 900) return { text: '⚠️ Moderate Quality', className: 'quality-moderate' };
+                return { text: '❌ Poor Quality', className: 'quality-poor' };
+            }
+            
+            if (type === 'temperature') {
+                if (value >= 20 && value <= 30) return { text: '✅ Optimal (20-30°C)', className: 'quality-excellent' };
+                if (value >= 15 && value <= 35) return { text: '✔ Good (15-35°C)', className: 'quality-good' };
+                if (value >= 10 && value <= 40) return { text: '⚠️ Moderate', className: 'quality-moderate' };
+                return { text: '❌ Extreme Temperature', className: 'quality-poor' };
+            }
+            
+            if (type === 'humidity') {
+                if (value >= 40 && value <= 60) return { text: '✅ Ideal (40-60%)', className: 'quality-excellent' };
+                if (value >= 30 && value <= 70) return { text: '✔ Good (30-70%)', className: 'quality-good' };
+                if (value >= 20 && value <= 80) return { text: '⚠️ Acceptable', className: 'quality-moderate' };
+                return { text: '❌ Too High/Low', className: 'quality-poor' };
+            }
+        }
+
+        function updateCurrentValues(feeds) {
+            var latestFeed = feeds[feeds.length - 1];
+            
+            var turbCurrent = parseFloat(latestFeed.field1);
+            document.getElementById('turbidityValue').textContent = turbCurrent ? turbCurrent.toFixed(2) : '--';
+            if (turbCurrent) {
+                var quality = getWaterQuality('turbidity', turbCurrent);
+                document.getElementById('turbidityQuality').textContent = quality.text;
+                document.getElementById('turbidityQuality').className = 'quality-indicator ' + quality.className;
+            }
+            
+            var tdsCurrent = parseFloat(latestFeed.field2);
+            document.getElementById('tdsValue').textContent = tdsCurrent ? tdsCurrent.toFixed(1) : '--';
+            if (tdsCurrent) {
+                var quality = getWaterQuality('tds', tdsCurrent);
+                document.getElementById('tdsQuality').textContent = quality.text;
+                document.getElementById('tdsQuality').className = 'quality-indicator ' + quality.className;
+            }
+            
+            var tempCurrent = parseFloat(latestFeed.field3);
+            document.getElementById('tempValue').textContent = tempCurrent ? tempCurrent.toFixed(1) : '--';
+            if (tempCurrent) {
+                var quality = getWaterQuality('temperature', tempCurrent);
+                document.getElementById('tempQuality').textContent = quality.text;
+                document.getElementById('tempQuality').className = 'quality-indicator ' + quality.className;
+            }
+            
+            var humCurrent = parseFloat(latestFeed.field4);
+            document.getElementById('humidityValue').textContent = humCurrent ? humCurrent.toFixed(1) : '--';
+            if (humCurrent) {
+                var quality = getWaterQuality('humidity', humCurrent);
+                document.getElementById('humidityQuality').textContent = quality.text;
+                document.getElementById('humidityQuality').className = 'quality-indicator ' + quality.className;
+            }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', saveConfig);
+        
+        document.getElementById('channelId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                saveConfig();
+            }
+        });
+    </script>
+</body>
+</html>
